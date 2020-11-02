@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<meta charset="UTF-8">
+<html>
+
+<head>
+    <title>Programming Assignment 2</title>
+    <style>
+        body {
+            background-color: #EEEEEE;
+        }
+
+        label {
+            white-space: pre;
+        }
+    </style>
+
+    <!-- vertex shader -->
+    <script type="x-shader/x-vertex" id="vshader-source">
+
+        // TODO: Your code goes here.
+        // Vertex Shader computes the coordinates for all the vertices which are being drawn.
+        // Fragment Shader computes the color for those vertices.
+        // You can also pass variables from the vertex shader to the fragment shader.
+        // Look into the pa2.js and see what attributes and uniforms are being transferred to both the
+        // shaders. Write the code in both the shaders appropriately.
+
+        attribute vec3 a_coords;
+        attribute vec3 a_normal;
+
+        uniform mat4 modelview;
+        uniform mat4 projection;
+        uniform mat3 normalMatrix;
+
+        varying vec3 v_normal;
+        varying vec4 v_light;
+        
+        void main() {
+            v_normal = normalize(normalMatrix * a_normal);
+            v_light = modelview * vec4(a_coords, 1.0);
+            gl_Position = projection * modelview * vec4(a_coords, 1.0);
+        }
+
+    </script>
+
+    <!-- fragment shader -->
+    <script type="x-shader/x-fragment" id="fshader-source">
+        #ifdef GL_FRAGMENT_PRECISION_HIGH
+        precision highp float;
+        #else
+        precision mediump float;
+        #endif
+
+        // TODO: Your code goes here.
+        // Fragment Shader computes the color for those vertices.
+        // You can also pass variables from the vertex shader to the fragment shader.
+        // Look into the pa2.js and see what attributes and uniforms are being transferred to both the
+        // shaders. Write the code in both the shaders appropriately.
+        // Use the diffuse_color to compute both ambient and diffuse lighting.
+        // Use the specular_color to compute the specular lighting.
+        // Use K_a = 0.1, K_d = 0.8, K_s = 0.4.
+
+        uniform mat3 normalMatrix;
+        uniform vec4 lightPosition;
+        uniform vec4 diffuseColor;
+        uniform vec3 specularColor;
+        uniform float specularExponent;
+        uniform bool ambient;
+        uniform bool diffuse;
+        uniform bool specular;
+
+        varying vec4 v_light;
+        varying vec3 v_normal;
+        
+
+        void main() {
+            vec3 L, N, R, V, f_light;
+            f_light = vec3(0, 0, 0);
+
+            if (lightPosition.w == 0.0) {
+                L = normalize(lightPosition.xyz);
+            } else {
+                L = normalize(lightPosition.xyz/lightPosition.w - v_light.xyz);
+            }
+
+            N = v_normal;
+            R = -reflect(L, N);
+            V = normalize(-v_light.xyz);
+
+            if (ambient == true) {
+                vec3 ambient_light = diffuseColor.rgb * 0.1;
+                f_light += ambient_light;
+            }
+
+            if (diffuse == true) {
+                vec3 diffuse_light = diffuseColor.rgb * max(dot(N, L), 0.0) * 0.8;
+                f_light += diffuse_light;
+            }
+
+            if (specular == true) {
+                vec3 specular_light = specularColor * pow(max(dot(R, V), 0.0), specularExponent) * 0.4;
+                f_light += specular_light;
+            }
+
+            gl_FragColor = vec4(f_light, 1.0);
+        }
+    </script>
+
+    <script src="gl-matrix-min.js"></script>
+    <script src="trackball-rotator.js"></script>
+    <script src="model.js"></script>
+    <script src="pa2.js"></script>
+</head>
+
+
+<body onload="init()">
+    Name: Hanmei Yang <br />
+    Student ID: 001046577 <br />
+
+    <p style="width:600px; text-align: left;">
+        <label><b>Object:</b> <select id="object">
+                <option value="0">Torus</option>
+                <option value="1">Cylinder</option>
+                <option value="2">Sphere</option>
+            </select></label><br>
+
+        <label><b>Lighting: </b></label>
+        <label><b>Ambient</b><input type="checkbox" id="ambient"></label>
+        <label><b>Diffuse</b><input type="checkbox" id="diffuse"></label>
+        <label><b>Specular</b><input type="checkbox" id="specular"></label><br />
+
+        <label><b>Light Position:</b> <select id="lightpos">
+                <option value="0">[0,0,0,1] (Viewpoint light)</option>
+                <option value="1">[0,0,1,0] (Directional, into screen)</option>
+                <option value="2">[0,1,0,0] (Directional, from above)</option>
+                <option value="3">[0,0,-10,1] (On z-axis, close to object)</option>
+                <option value="4">[2,3,5,0] (Directional from upper right)</option>
+                <!--    TODO: Your code goes here.
+        Add two more lights at different directions. One from the bottom and One
+        from the left of the scene. Appropriately change the pa2.js file so that when user
+        selects these new light positions, the scene gets updated.
+        */ -->
+                <option value="5">[0,-2,0,0] (Directional from bottom)</option>
+                <option value="6">[-2,0,0,0] (Directional from left)</option>
+            </select></label><br>
+
+        <label><b>Specular Exponent:</b> <select id="exponent">
+                <option>0</option>
+                <option>1</option>
+                <option>2</option>
+                <option>5</option>
+                <option>10</option>
+                <option>20</option>
+                <option>50</option>
+                <option>100</option>
+            </select></label>
+    </p>
+
+    <div id="canvas-holder">
+        <canvas width=700 height=700 id="myGLCanvas" style="background-color:red"></canvas>
+    </div>
+
+    <p>
+        TO DO: Write your description here:
+        The larger of the specular exponent value, the less of the shiny area of the object and the more smoothness of
+        the surface.
+    </p>
+
+</body>
+
+
+</html>

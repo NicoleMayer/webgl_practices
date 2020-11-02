@@ -1,0 +1,144 @@
+<!DOCTYPE HTML>
+<html lang="en">
+
+<script type="x-shader/x-vertex" id="vshader-source">
+    attribute vec3 a_coords;
+    attribute vec3 a_normal;
+
+    uniform mat4 modelview;
+    uniform mat4 projection;
+    uniform mat3 normalMatrix;
+
+    varying vec4 eyeCoords;
+    varying vec3 normal;
+
+    void main() {
+        vec4 coords = vec4(a_coords, 1.0);
+        eyeCoords = modelview * coords; 
+        gl_Position = projection * eyeCoords;
+
+        normal = normalize(normalMatrix * a_normal);
+    }
+</script>
+
+<!-- fragment shader -->
+<script type="x-shader/x-fragment" id="fshader-source">
+    precision mediump float;
+
+    uniform vec4 lightPosition;
+    uniform vec4 leftLightPosition;
+    uniform vec4 rightLightPosition;
+    uniform vec4 carLightDirection;
+
+    uniform vec4 diffuseColor;
+    uniform vec3 specularColor;
+    uniform float specularExponent;
+
+    uniform int pointlight;
+    uniform int sunlight;
+    uniform int headlight;
+
+    varying vec4 eyeCoords;
+    varying vec3 normal;
+
+    vec4 renderLight(vec4 lightPosition, bool isHeadlight)
+    {
+        vec3 N, L, R, V;  
+        vec4 v_color = vec4(0, 0, 0, 1);
+        float attetuationLightWeighting = 0.0;
+
+        N = normal;
+        L = normalize(lightPosition.xyz - eyeCoords.xyz);
+        R = normalize(reflect(-L, N));
+        V = normalize(-eyeCoords.xyz); 
+
+        if (lightPosition.w == 0.0) {
+            attetuationLightWeighting = 1.0; // sun
+        }
+        else
+        {
+            float dist = distance(lightPosition, eyeCoords);
+            float angle = degrees(acos(dot(-L, normalize(carLightDirection.xyz - eyeCoords.xyz))));
+            
+            if (!isHeadlight) {
+                attetuationLightWeighting = clamp( 2.0 / dist, 0.0, 1.0);
+            }
+            else if (isHeadlight && dist < 6.0 && angle < 45.0) {
+                attetuationLightWeighting = clamp( 1.0 / dist, 0.0, 1.0);
+            }
+        }
+
+        if (dot(L, N) > 0.0 || isHeadlight)
+        {
+            vec3 color;
+            vec3 diffuse_color = dot(L, N) * diffuseColor.rgb;
+            vec3 specular_color = pow(dot(R, V), specularExponent) * specularColor;
+
+            color = diffuse_color;
+            if (sunlight == 1 && dot(R, V) > 0.0) {
+                color += specular_color;
+            }
+
+            v_color += vec4(color, diffuseColor.a) * attetuationLightWeighting;
+        }
+
+        return v_color;
+    }
+
+    void main()
+    {
+        if (pointlight == 1)
+        {
+            gl_FragColor = vec4(1, 1, 0.5, 1); // yellow
+        }
+        else
+        {
+            vec4 v_color = renderLight(lightPosition, false); // point or sun light
+
+            if (headlight == 1) {
+                v_color += renderLight(leftLightPosition, true);
+                v_color += renderLight(rightLightPosition, true);
+            }
+            else
+            {
+                v_color += diffuseColor * 0.3;
+            }
+            gl_FragColor = v_color;
+        }
+    }
+</script>
+
+<script type="text/javascript" src="webgl-utils.js"></script>
+<script src="gl-matrix-min.js"></script>
+<script src="models.js"></script>
+<script src="final.js"></script>
+<script src="trackball-rotator.js"></script>
+<script src="street.js"></script>
+<script src="sun.js"></script>
+<script src="tree.js"></script>
+<script src="car.js"></script>
+<script src="lamp.js"></script>
+
+
+<head>
+    <title>Final Project </title>
+    <meta charset="utf-8">
+</head>
+
+<body onload="startup()">
+    <form id="input_form">
+        <fieldset>
+            Name: Hanmei Yang <br />
+            Student ID: 001046577 <br />
+        </fieldset>
+        <label><b>Animate</b><input type="checkbox" id="animate"></label>
+        <div id="canvas-holder">
+            <canvas width=700 height=700 id="myGLCanvas" style="background-color:black"></canvas>
+        </div>
+    </form>
+
+
+
+</body>
+
+</html>
